@@ -1,0 +1,21 @@
+{
+    "name": "kongflower/swooletar",
+    "description": "swoole框架核心代码",
+    "keywords": [
+        "swoole", "http", "tcp", "udp", "socket"
+    ],
+    "type": "library",
+    "license": "MIT",
+    "authors": [{
+        "name": "gang",
+        "email": "1355528968@qq.com"
+    }],
+    "require": {
+    
+    },
+    "autoload": {
+        "psr-4": {
+            "SwooleTar\\": "src/"
+        }
+    }
+}
