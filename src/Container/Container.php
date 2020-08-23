@@ -9,13 +9,44 @@ use Exception;
  */
 class Container
 {
-    // 0. 单例
-    protected static $instance;
-    // 1. 需要容器
-    protected $bindings = [];
-    protected $instances = [];
     /**
-     * 容器绑定的方法
+     * 容器实例（单例）
+     */
+    protected static $instance;
+
+    /**
+     * 1. 系统绑定容器存储
+     * 
+     */
+    protected $bindings = [];
+
+    /**
+     * 容器实例解析后存储位置
+     */
+    protected $instances = [];
+
+    /**
+     * 创建容器单利
+     */
+    public static function getInstance()
+    {
+        if (is_null(static::$instance)) {
+            static::$instance = new static;
+        }
+        return static::$instance;
+    }
+
+    /**
+     * 设置当前类的对象
+     */
+    public static function setInstance($container = null)
+    {
+        return static::$instance = $container;
+    }
+
+
+    /**
+     * 容器绑定的方法(服务启动前将类的对象绑定到容器中)
      * 六星教育 @shineyork老师
      * @param  string $abstract 标识
      * @param  object $object   实例对象或者闭包
@@ -38,59 +69,47 @@ class Container
      */
     public function make($abstract, $parameters = [])
     {
-        return $this->resolve($abstract, $parameters);
+        // var_dump($abstract);exit;
+        return $this->resolve(ucfirst($abstract), $parameters);
     }
 
 
+    /**
+     * 解析容器
+     */
     public function resolve($abstract, $parameters = [])
     {
         if (isset($this->instances[$abstract])) {
             return $this->instances[$abstract];
         }
-
+        
+        //检查服务对象是否绑定到容器中
         if (!$this->has($abstract)) {
             // 如果不存在自行
             // 选择返回, 可以抛出一个异常
-            throw new Exception('没有找到这个容器对象'.$abstract, 500);
+            throw new \Exception('没有找到这个容器对象'.$abstract, 500);
         }
 
         $object = $this->bindings[$abstract];
+        
         // 在这个容器中是否存在
-        // 1. 判断是否一个为对象
+        // 1. 判断是否为一个对象
         // 2. 闭包的方式
         if ($object instanceof Closure) {
             return $object();
         }
-        // if (is_object($object)) {
-        //     $this->instances[$abstract] = $object;
-        // } else {
-        //     $this->instances[$abstract] = new $object();
-        // }
-
+        
         // 3. 类对象的字符串 (类的地址)
         return $this->instances[$abstract] = (is_object($object)) ? $object :  new $object(...$parameters) ;
+        
     }
+
+    
     // 判断是否在容器中
     // 1. 容器很多便于扩展
     // 2. 可能在其他场景中会用到
     public function has($abstract)
     {
         return isset($this->bindings[$abstract]);
-    }
-
-    
-    // 单例创建
-    public static function getInstance()
-    {
-        if (is_null(static::$instance)) {
-            static::$instance = new static;
-        }
-
-        return static::$instance;
-    }
-
-    public static function setInstance($container = null)
-    {
-        return static::$instance = $container;
     }
 }

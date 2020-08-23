@@ -95,7 +95,7 @@ abstract class Server
     {
         $this->app = $app;
     }
-
+    
     /**
      * 设置swoole的回调事件
      */
@@ -125,6 +125,13 @@ abstract class Server
         //4、设置swoole的回调函数
         $this->setSwooleEvent();
 
+        // rpc服务
+        $rpcConfig = app('config');
+        $tcpable = $rpcConfig->getConfig('swoole.rpc.tcpable');
+        if($tcpable){
+            new \SwooleTar\Rpc\Rpc($this->swooleServer,$rpcConfig);
+        }
+        
         // 5. 启动
         $this->swooleServer->start();
     }
