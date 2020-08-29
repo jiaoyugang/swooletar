@@ -12,7 +12,7 @@ abstract class Server
     /**
      * Server|HttpServer|WebSocketServer|
      */
-    protected $swooleServer;
+    protected $swooleServerobj;
 
     /**
      * 监听端口
@@ -84,7 +84,7 @@ abstract class Server
 
 
     /**
-     * 初始化监听的事件
+     * 子服务监听的事件扩展
      */
     protected abstract function initEvent();
 
@@ -103,7 +103,7 @@ abstract class Server
     {
         foreach($this->event as $type => $events){ 
             foreach($events as $event => $func){
-               $this->swooleServer->on($event,[$this,$func]);
+               $this->swooleServerobj->on($event,[$this,$func]);
             }
         }
     }
@@ -117,23 +117,23 @@ abstract class Server
         $this->createServer();
         
         //2、设置swoole配置
-        $this->swooleServer->set($this->config);
+        $this->swooleServerobj->set($this->config);
 
         //3、设置需要注册的回调函数
         $this->initEvent();
-
-        //4、设置swoole的回调函数
-        $this->setSwooleEvent();
 
         // rpc服务
         $rpcConfig = app('config');
         $tcpable = $rpcConfig->getConfig('swoole.rpc.tcpable');
         if($tcpable){
-            new \SwooleTar\Rpc\Rpc($this->swooleServer,$rpcConfig);
+            new \SwooleTar\Rpc\Rpc($this->swooleServerobj,$rpcConfig);
         }
-        
+
+        //4、设置swoole的回调函数
+        $this->setSwooleEvent();
+
         // 5. 启动
-        $this->swooleServer->start();
+        $this->swooleServerobj->start();
     }
     
     /**
@@ -141,13 +141,27 @@ abstract class Server
      */
     public function onStart($server)
     {
-        // 打印服务配置信息
-        echo "---------------------------------------------------------------\n";
-        echo "host           : {$this->host}\n";
-        echo "port           : {$this->port}\n";
-        echo "master_pid     : {$server->master_pid}\n";
-        echo "manager_pid    : {$server->manager_pid}\n";
+        $Config = app('config');
         
+        if($Config->getConfig('swoole.debug')){
+            // 打印服务配置信息
+            echo "---------------------------------------------------------------\n";
+            echo "host                  : {$this->host}\n";
+            echo "port                  : {$this->port}\n";
+            echo "master_pid            : {$server->master_pid}\n";
+            echo "manager_pid           : {$server->manager_pid}\n";
+            echo "------------------------------\n";
+
+            $tcpable = $Config->getConfig('swoole.rpc.tcpable');
+            if($tcpable){
+            echo "Rpc Server status     : true\n";
+            }else{
+            echo "Rpc                   : false\n";
+            }
+            echo "Rpc server address    : ".$Config->getConfig('swoole.rpc.host').':'.$Config->getConfig('swoole.rpc.port')."\n";
+        }
+        
+
         // 记录服务进程id
         $this->pidMap['masterPid'] = $server->master_pid;
         $this->pidMap['managerPid'] = $server->manager_pid;
@@ -235,7 +249,7 @@ abstract class Server
                   $action = 'IN_MOVE';
                   break;
             }
-            $this->swooleServer->reload();
+            $this->swooleServerobj->reload();
         };
     }
 

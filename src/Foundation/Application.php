@@ -4,7 +4,7 @@ namespace SwooleTar\Foundation;
 use SwooleTar\Container\Container;
 use SwooleTar\Route\Route;
 use SwooleTar\Server\Http\HttpServer;
-
+use SwooleTar\Server\WebSocket\WebSocketServer;
 
 class Application extends Container
 {
@@ -16,6 +16,8 @@ class Application extends Container
     /___/   |__/\__/  \____/  /___/    \___/     \___/\_|  |__|
     ";
 
+    protected $serviceObj = null;
+
     /**
      * 监听根目录，接收变量
      */
@@ -26,26 +28,39 @@ class Application extends Container
      */
     public function __construct($path = null)
     {
+        //实例化Application对象给Container
+        self::setInstance($this);
+
         // debug('获取对象实例');
         if (!empty($path)) {
             $this->setBasePath($path);
         }
         echo self::SWOSTAR_WELCOME.PHP_EOL;
-        
-        //初始化Container容器:所有服务启动时，默认绑定到容器中
+       
+        //初始化Container容器://系统服务启动时，默认绑定实例对象到容器中
         $this->registerBaseBindings();
-
-        // debug(app('Config'));
-        //2、初始化路由
-        // $this->initRoute();
     }
 
     /**
      * 服务启动方法
      */
-    public function run()
+    public function run($argv = '')
     {
-        (new HttpServer($this))->start();
+        if(!isset($argv[1]) || empty($argv[1])){
+            exit("请正确输入服务启动命令\n");
+        }
+        switch($argv['1']){
+            case 'http:start':
+                (new HttpServer($this))->start();
+                break;
+            case 'ws:start':
+                (new WebSocketServer($this))->start();
+                break;
+            default:
+                exit("请正确输入服务启动命令\n");
+                break;
+        }
+        
     }
 
     /**
@@ -53,31 +68,20 @@ class Application extends Container
      */
     public function registerBaseBindings()
     {
-        //实例化Application对象给Container
-        self::setInstance($this);
-
-        //系统服务启动时，默认绑定实例对象
         $binds= [
             //标示=>对象
-            'Config' => (new \SwooleTar\Config\Config()), //配置文件
-            'Index' => (new \SwooleTar\Index()), //测试文件
-            'HttpRequest' => (new \SwooleTar\Message\Http\Request()), //http请求服务组件
-            'Route' => Route::getInstance()->registerRouter(),  //框架路由
+            'Config'        =>      (new \SwooleTar\Config\Config()), //配置文件
+            'Index'         =>      (new \SwooleTar\Index()), //测试文件
+            'HttpRequest'   =>      (new \SwooleTar\Message\Http\Request()), //http请求服务组件
+            'Route'         =>      Route::getInstance()->registerRouter(),  //注册路由
         ];
         foreach($binds as $key => $value){
             $this->bind($key,$value);
         }
     }
     
-    /**
-     * 初始并加载化路由信息（此方法废弃，移到容器批量注册registerBaseBindings()）
-     */
-    public function initRoute()
-    {
-        $this->bind('Route',  Route::getInstance()->registerRouter());
-        // debug('路由初始化');
-    }
-    
+
+
     #---------------------------------- 接收项目根目录
     
     /**

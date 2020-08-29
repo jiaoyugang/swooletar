@@ -17,13 +17,7 @@ class HttpServer extends Server
     public function createServer()
     {
         $httpConfig = app('config');
-    //    debug([$httpConfig->getConfig('swoole.http.host'),
-    //    $httpConfig->getConfig('swoole.http.port')]);
-        $this->swooleServer = new SwooleHttpServer(
-            $httpConfig->getConfig('swoole.http.host'),
-            $httpConfig->getConfig('swoole.http.port')
-        );
-        $this->watchFile = false;
+        $this->swooleServerobj = new SwooleHttpServer($httpConfig->getConfig('swoole.http.host'),$httpConfig->getConfig('swoole.http.port'));
     }
 
     /**
@@ -45,7 +39,7 @@ class HttpServer extends Server
     public function onRequest(SwooleRequest $request, SwooleResponse $response)
     {
         //过滤Google favicon.ico请求
-        
+       
         if($request->server['request_uri'] == '/favicon.ico'){
             $response->status(404);
             $response->end();
@@ -57,19 +51,11 @@ class HttpServer extends Server
         // debug($httpRequest->getMethod());
         // debug($httpRequest->getUriPath());
 
-        $return = app('route');
-
-        // debug($return);
-        
          // 执行控制器的方法
-         $return = app('route')->setMethod($httpRequest->getMethod())->match($httpRequest->getUriPath());
+         $return = app('route')->setFlag('Http')->setMethod($httpRequest->getMethod())->match($httpRequest->getUriPath());
          
          $response->header("content-type","text/html;charset=utf-8");
          $response->end($return);
-        // debug($httpRequest->getMethod());
-        #发送响应"<h1>hello swooleTar</h1>"
-        // $response->header("content-type","text/html;charset=utf-8");
-        // $response->end(json_encode(['name' => '测试' ,'title' => 'swoole'] ,JSON_UNESCAPED_UNICODE));
     }
 
     /**
