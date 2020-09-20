@@ -1,9 +1,13 @@
 <?php
+/*
+ * @Description: WebSocket 客户端连接信息,基于redis实现
+ * @version: 
+ * @Author: 1355528968@qq.com
+ * @Date: 2020-08-29 15:56:10
+ */
 namespace SwooleTar\Server\WebSocket;
 
-/**
- * WebSocket 客户端连接信息
- */
+
 class Connection
 {
     /**

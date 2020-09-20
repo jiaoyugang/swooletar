@@ -1,8 +1,13 @@
 <?php
+/*
+ * @Description: 
+ * @version: 
+ * @Author: 1355528968@qq.com
+ * @Date: 2020-08-23 22:22:14
+ */
 namespace SwooleTar\Rpc;
 
 use Swoole\Server as SwooleServer;
-use Swoole\StringObject;
 
 class Rpc
 {
@@ -16,14 +21,19 @@ class Rpc
     /**
      * 初始化Rpc服务
      */
-    public function __construct(SwooleServer $server,$rpcConfig)
+    public function __construct(SwooleServer $server,$app)
     {   
-        $this->host = $rpcConfig->getConfig('swoole.rpc.host');
-        $this->port = $rpcConfig->getConfig('swoole.rpc.port');
-        $this->type = $rpcConfig->getConfig('swoole.rpc.type');
+        
+        $rpcConfig  = $app->make('config');
+        $this->host = $rpcConfig->get('swoole.http.rpc.host');
+        $this->port = $rpcConfig->get('swoole.http.rpc.port');
+        $this->type = $rpcConfig->get('swoole.http.rpc.type');
         $this->initRpc($server);
     }
 
+    /**
+     * Rpc服务
+     */
     public function initRpc($server)
     {
         $tcp_server = $server->listen($this->host,$this->port,SWOOLE_SOCK_TCP);

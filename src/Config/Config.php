@@ -1,4 +1,12 @@
 <?php
+/*
+ * @Description: 
+ * @Version: 2.0
+ * @Autor: gang
+ * @Date: 2020-08-25 20:10:32
+ * @LastEditors: Please set LastEditors
+ * @LastEditTime: 2020-09-08 22:51:50
+ */
 namespace SwooleTar\Config;
 
 class Config
@@ -19,9 +27,7 @@ class Config
     public function __construct()
     {
         $this->pathConfig = app()->getBasePath().'/config';
-        // debug($this->pathConfig);
         $this->parseConfg();
-        // debug(app('config'));
     }
 
     /**
@@ -33,7 +39,6 @@ class Config
     protected function parseConfg()
     {
         $dir = scandir($this->pathConfig);
-        // debug($dir);
         foreach($dir as $key => $file){
             if($file == '.' || $file == '..'){
                 continue;
@@ -50,31 +55,16 @@ class Config
     }
 
     /**
-     * 获取配置文件信息
+     * @description: 获取配置信息
+     * @param {type} 
+     * @return {type} 
      */
-    public function getConfig($index)
+    public function get($keys)
     {
-        $config = $this->mapConfig;
-        $index = explode('.',$index);
-        return $this->scanIndex($config,$index);
-    }
-
-    /**
-     * 递归遍历获取配置信息
-     */
-    public function scanIndex( $config ,$index)
-    {
-        // debug($config);
-        foreach($config as $key => $val){
-            if(in_array($key,$index)){
-                if(is_string($val) || is_int($val) || is_bool($val)){
-                    return $val;
-                }else{
-                    return $this->scanIndex($val , $index);
-                }
-                
-            }
+        $data = $this->mapConfig;
+        foreach (\explode('.', $keys) as $key => $value) {
+            $data = $data[$value];
         }
+        return $data;
     }
-
 }

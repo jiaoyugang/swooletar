@@ -1,12 +1,20 @@
 <?php
+/*
+ * @Description: 
+ * @Version: 2.0
+ * @Autor: gang
+ * @Date: 2020-08-31 23:32:54
+ * @LastEditors: Please set LastEditors
+ * @LastEditTime: 2020-09-09 22:14:26
+ */
+
 namespace SwooleTar\Server;
 
+use Swoole\Server as SwooleServer;
 use SwooleTar\Foundation\Application;
 use SwooleTar\Supper\Inotify;
 
-/**
- * swoole基类
- */
+
 abstract class Server
 {
     /**
@@ -14,6 +22,11 @@ abstract class Server
      */
     protected $swooleServerobj;
 
+    /**
+     * redis 连接对象
+     */
+    protected $redis = null;
+    
     /**
      * 监听端口
      */
@@ -31,6 +44,7 @@ abstract class Server
      */
     protected $watchFile = false;
 
+
     /**
      * pid
      */
@@ -42,7 +56,10 @@ abstract class Server
     protected $app ;
 
     /**
-     * 记录pid信息
+     * @description: 记录pid信息
+     * @param {type} 
+     * @return {type} 
+     * @author: gang
      */
     protected $pidMap = [
         'masterPid' => 0,
@@ -52,7 +69,10 @@ abstract class Server
     ];
 
     /**
-     * 注册的回调事件
+     * @description: 注册的回调事件 
+     * @param {type} 
+     * @return {type} 
+     * @author: gang
      */
     protected $event = [
             #这是所有服务均会注册的时间
@@ -71,7 +91,10 @@ abstract class Server
     ];
 
     /**
-     * swoole的相关配置信息
+     * @description: swoole的相关配置信息 
+     * @param {type} 
+     * @return {type} 
+     * @author: gang
      */
     protected $config = [
         'task_worker_num' => 0,
@@ -83,6 +106,7 @@ abstract class Server
     protected abstract function createServer();
 
 
+    // protected abstract function initSetting();
     /**
      * 子服务监听的事件扩展
      */
@@ -122,16 +146,18 @@ abstract class Server
         //3、设置需要注册的回调函数
         $this->initEvent();
 
-        // rpc服务
-        $rpcConfig = app('config');
-        $tcpable = $rpcConfig->getConfig('swoole.rpc.tcpable');
+        //开启rpc服务
+        $rpcConfig = $this->app->make('config');
+        // debug($rpcConfig);
+        $tcpable = $rpcConfig->get('swoole.http.tcpable');
+        // debug($tcpable);
         if($tcpable){
-            new \SwooleTar\Rpc\Rpc($this->swooleServerobj,$rpcConfig);
+            new \SwooleTar\Rpc\Rpc($this->swooleServerobj,$this->app);            
         }
 
         //4、设置swoole的回调函数
         $this->setSwooleEvent();
-
+        
         // 5. 启动
         $this->swooleServerobj->start();
     }
@@ -141,25 +167,18 @@ abstract class Server
      */
     public function onStart($server)
     {
-        $Config = app('config');
-        
-        if($Config->getConfig('swoole.debug')){
-            // 打印服务配置信息
-            echo "---------------------------------------------------------------\n";
-            echo "host                  : {$this->host}\n";
-            echo "port                  : {$this->port}\n";
-            echo "master_pid            : {$server->master_pid}\n";
-            echo "manager_pid           : {$server->manager_pid}\n";
-            echo "------------------------------\n";
+        $Config = $this->app->make('config');
+        if($Config->get('swoole.debug')){
+            app('Logs')::info('master_pid ',$server->master_pid);
+            app('Logs')::info('manager_pid',$server->manager_pid);
+            app('Logs')::info('Rpc Server ',join(':',[$Config->get('swoole.http.rpc.host'),$Config->get('swoole.http.rpc.port')]));
+            //打印启动日志
+            $this->info_logs();
+            // 通过注册事件触发(路由注册)
+            $this->app->make('event')->trigger('start');
 
-            $tcpable = $Config->getConfig('swoole.rpc.tcpable');
-            if($tcpable){
-            echo "Rpc Server status     : true\n";
-            }else{
-            echo "Rpc                   : false\n";
-            }
-            echo "Rpc server address    : ".$Config->getConfig('swoole.rpc.host').':'.$Config->getConfig('swoole.rpc.port')."\n";
         }
+        
         
 
         // 记录服务进程id
@@ -171,10 +190,13 @@ abstract class Server
             $this->inotify = new Inotify($this->app->getBasePath(), $this->watchEvent());
             $this->inotify->start();
         }
+        // debug(app('Logs')::getLoggers());
     }
 
     /**
-     * 
+     * @description: 
+     * @param {type} 
+     * @return {type} 
      */
     public function onManagerStart($server)
     {
@@ -190,12 +212,23 @@ abstract class Server
     }
 
     /**
-     * 
+     * @description: 此事件在 Worker 进程 / Task 进程启动时发生，这里创建的对象可以在进程生命周期内使用。
+     * @param {type} 
+     * @return {type} 
+     * @author: gang
      */
-    public function onWorkerStart()
+    public function onWorkerStart(SwooleServer $server, int $workerId)
     {
-        
+        // if($server->taskworker){
+        //     debug("此进程{$workerId}为worker进程");
+        // }else{
+        //     debug("此进程{$workerId}为task进程");
+        // }
+        $this->redis = new \Redis();
+        $this->redis->pconnect("127.0.0.1", 6379);
+        $this->redis->auth('phpstudy');
     }
+
 
     /**
      * 
@@ -211,6 +244,11 @@ abstract class Server
     public function onWorkerError()
     {
 
+    }
+
+    public function getRedis()
+    {
+        return $this->redis;
     }
 
     /**
@@ -274,4 +312,24 @@ abstract class Server
         return $this;
     }
 
+    /**
+     * 服务启动日志
+     */
+    public function info_logs()
+    {
+        $start_logs = $this->app->make('Logs')->getLoggers();
+        // debug($start_logs);
+        $info = "---------------------------------------------------------------\n";
+        $start_logs[''] = "---------------------------------------------------------------\n";
+        // debug($start_logs);
+        foreach($start_logs as $key => $value){
+            if(!empty($key)){
+                $info.= join("                ", [$key,$value."\n"]);
+            }else{
+                $info.= join("", [$key,$value."\n"]);
+            }
+            
+        }  
+        echo $info;
+    }
 }

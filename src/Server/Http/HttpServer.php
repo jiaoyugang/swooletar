@@ -1,4 +1,10 @@
 <?php
+/*
+ * @Description: 
+ * @version: 
+ * @Author: 1355528968@qq.com
+ * @Date: 2020-08-23 22:22:14
+ */
 namespace SwooleTar\Server\Http;
 
 use SwooleTar\Server\Server;
@@ -16,8 +22,12 @@ class HttpServer extends Server
      */
     public function createServer()
     {
-        $httpConfig = app('config');
-        $this->swooleServerobj = new SwooleHttpServer($httpConfig->getConfig('swoole.http.host'),$httpConfig->getConfig('swoole.http.port'));
+        $httpConfig = app('config');;
+        $host = $httpConfig->get('swoole.http.host');
+        $port = $httpConfig->get('swoole.http.port');
+        app('Logs')::info('Http Server','http://'.$host.':'.$port);
+        
+        $this->swooleServerobj = new SwooleHttpServer($host,$port);
     }
 
     /**
@@ -66,7 +76,7 @@ class HttpServer extends Server
      * @param mixed $data
      * @return void
      */
-    public function onTask(SwooleServer $server,int $task_id,int $src_worker_id,mixed $data)
+    public function onTask(SwooleServer $server,int $task_id,int $src_worker_id, $data)
     {
         // $server->task();
     }
@@ -79,7 +89,7 @@ class HttpServer extends Server
      * @param mixed $data
      * @return void
      */
-    public function onFinish(SwooleServer $server , int $task_id , mixed $data)
+    public function onFinish(SwooleServer $server , int $task_id , $data)
     {
 
     }
